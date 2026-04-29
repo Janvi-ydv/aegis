@@ -3,12 +3,15 @@
 > An AI-powered automated vulnerability assessment pipeline for authorized penetration testing.
 
 ```
-    █████╗ ███████╗ ██████╗ ██╗███████╗
-   ██╔══██╗██╔════╝██╔════╝ ██║██╔════╝
-   ███████║█████╗  ██║  ███╗██║███████╗
-   ██╔══██║██╔══╝  ██║   ██║██║╚════██║
-   ██║  ██║███████╗╚██████╔╝██║███████║
-   ╚═╝  ╚═╝╚══════╝ ╚═════╝ ╚═╝╚══════╝
+    +===========================================================+
+    |    ___    ___  ____ ___ ____                              |
+    |   / _ \  | __|/ ___|_ _/ ___|                            |
+    |  | |_| | | _|| |  _ | |\___ \                            |
+    |   \__,_| |___|\____|___\____/                            |
+    |                                                           |
+    |   Adaptive Exploitation & Global Intelligence System      |
+    |   Version 1.0.0  |  For authorized testing only          |
+    +===========================================================+
 ```
 
 **⚠️ For authorized lab testing only. Unauthorized scanning is illegal.**
@@ -25,7 +28,7 @@ AEGIS automates the full vulnerability assessment pipeline for a target host:
 4. **FTP Probe** — anonymous login test + vsftpd 2.3.4 backdoor detection (CVE-2011-2523)
 5. **SSH Probe** — banner grab + version-based CVE flagging
 6. **MySQL Probe** — default credential testing
-7. **AI Intelligence** — Qwen2.5-72B-Instruct (via Together AI) correlates all findings into CVE mappings, MITRE ATT&CK TTPs, and a risk narrative
+7. **AI Intelligence** — Qwen2.5-72B-Instruct (via OpenRouter API) correlates all findings into CVE mappings, MITRE ATT&CK TTPs, and a risk narrative
 8. **Report Generation** — Professional PDF, JSON, or Markdown report
 
 ---
@@ -42,7 +45,7 @@ sudo apt update && sudo apt install -y nmap nikto gobuster enum4linux dirb
 python3 --version
 ```
 
-### Installation
+### Installation & Setup
 
 ```bash
 # Clone
@@ -56,14 +59,19 @@ source venv/bin/activate
 # Python dependencies
 pip install -r requirements.txt
 
-# Configure API key
-cp .env.example .env
-# Edit .env and set: TOGETHER_API_KEY="your_key_here"
+# Run the interactive setup wizard to configure your OpenRouter API key
+python aegis.py setup
 ```
 
 ### Usage
 
 ```bash
+# Interactive setup (configure API key, model, and other settings)
+python aegis.py setup
+
+# Show current configuration
+python aegis.py setup --show
+
 # Standard full scan (all ports, all modules, AI analysis, PDF report)
 sudo python aegis.py --target 192.168.56.101
 
@@ -119,7 +127,8 @@ aegis.py (entry point)
 ├── cli/parser.py          → argparse CLI
 ├── core/
 │   ├── orchestrator.py    → main pipeline coordinator
-│   ├── validator.py       → IP validation + scope authorization
+│   ├── setup_wizard.py    → interactive configuration wizard
+│   ├── validator.py       → IP and hostname validation
 │   └── dependency.py      → pre-flight tool checker
 │
 ├── modules/
@@ -131,11 +140,11 @@ aegis.py (entry point)
 │   └── mysql_probe.py     → default credentials
 │
 ├── ai/
-│   ├── intelligence.py    → Together AI API client
+│   ├── intelligence.py    → OpenRouter API client
 │   └── prompts.py         → LLM system prompt + message builder
 │
 ├── reporting/
-│   ├── pdf_generator.py   → fpdf2 PDF builder
+│   ├── pdf_generator.py   → fpdf2 PDF builder (with UTF-8 sanitization)
 │   ├── json_exporter.py   → JSON serializer
 │   └── markdown_gen.py    → Markdown generator
 │
@@ -154,8 +163,8 @@ aegis.py (entry point)
 | Language | Python 3.11 |
 | CLI | argparse (stdlib) |
 | Terminal UI | Rich 13.7.1 |
-| AI Provider | Together AI |
-| LLM Model | Qwen/Qwen2.5-72B-Instruct |
+| AI Provider | OpenRouter |
+| LLM Model | qwen/qwen2.5-72b-instruct |
 | PDF Generation | fpdf2 2.7.9 |
 | HTTP Client | requests 2.31.0 |
 | Env Management | python-dotenv |
@@ -164,11 +173,11 @@ aegis.py (entry point)
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` and configure:
+You can configure these values by running `python aegis.py setup` or manually editing `.env`:
 
 ```bash
-TOGETHER_API_KEY="your_api_key"     # Required for AI analysis
-AEGIS_MODEL="Qwen/Qwen2.5-72B-Instruct"
+OPENROUTER_API_KEY="sk-or-your_key"     # Required for AI analysis
+AEGIS_MODEL="qwen/qwen2.5-72b-instruct"
 AEGIS_API_TIMEOUT=60
 AEGIS_API_RETRIES=3
 AEGIS_DEFAULT_PROFILE="full"
@@ -187,12 +196,12 @@ AEGIS_DEBUG="false"
 pip install -r requirements-dev.txt
 
 # Run all tests
-pytest tests/ -v --cov=.
+python -m pytest tests/ -v --cov=.
 
 # Run specific test file
-pytest tests/test_validator.py -v
-pytest tests/test_ai_engine.py -v
-pytest tests/test_nmap_parser.py -v
+python -m pytest tests/test_validator.py -v
+python -m pytest tests/test_ai_engine.py -v
+python -m pytest tests/test_nmap_parser.py -v
 ```
 
 ---
@@ -201,7 +210,7 @@ pytest tests/test_nmap_parser.py -v
 
 - **No hardcoded secrets** — API keys loaded from `.env` only
 - **No shell injection** — all subprocess calls use `shell=False` with list args
-- **No data exfiltration** — scan results sent ONLY to Together AI API
+- **No data exfiltration** — scan results sent ONLY to OpenRouter API
 - **Temp file cleanup** — `/tmp/aegis_*` files deleted after each run
 - **Input validation** — all targets validated before any subprocess call
 
