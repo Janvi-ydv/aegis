@@ -43,12 +43,27 @@ class AegisPdf(FPDF):
         self.set_auto_page_break(auto=True, margin=20)
         self.set_margins(15, 15, 15)
 
+    def sanitize(self, text: str) -> str:
+        """Sanitize text to be compatible with latin-1 core fonts."""
+        if not text:
+            return ""
+        text = str(text)
+        replacements = {
+            "—": "-", "–": "-", 
+            "“": '"', "”": '"', 
+            "‘": "'", "’": "'",
+            "…": "...", "•": "*",
+        }
+        for k, v in replacements.items():
+            text = text.replace(k, v)
+        return text.encode("latin-1", "ignore").decode("latin-1")
+
     def header(self):
         self.set_font("Helvetica", "B", 9)
         self.set_text_color(100, 100, 100)
-        self.cell(0, 8, f"AEGIS Vulnerability Assessment Report — {self.target}", align="L")
+        self.cell(0, 8, f"AEGIS Vulnerability Assessment Report - {self.sanitize(self.target)}", align="L")
         self.set_x(-60)
-        self.cell(0, 8, self.scan_date, align="R")
+        self.cell(0, 8, self.sanitize(self.scan_date), align="R")
         self.ln(4)
         self.set_draw_color(200, 200, 200)
         self.line(15, self.get_y(), 195, self.get_y())
@@ -75,7 +90,7 @@ class AegisPdf(FPDF):
         """Print body text with word wrap."""
         self.set_font("Helvetica", "", size)
         self.set_text_color(30, 30, 30)
-        self.multi_cell(0, 6, text)
+        self.multi_cell(0, 6, self.sanitize(text))
         self.ln(2)
 
     def severity_badge(self, severity: str, x: float = None, y: float = None):
@@ -110,7 +125,7 @@ class AegisPdf(FPDF):
         else:
             self.set_fill_color(255, 255, 255)
         for val, w in zip(values, widths):
-            val_str = str(val)[:int(w * 2)] if val else ""
+            val_str = self.sanitize(str(val))[:int(w * 2)] if val else ""
             self.cell(w, 6, val_str, border=1, fill=True)
         self.ln()
 
@@ -293,7 +308,7 @@ class PdfGenerator:
             pdf.set_font("Helvetica", "B", 11)
             pdf.set_text_color(0, 0, 0)
             y_before = pdf.get_y()
-            pdf.cell(0, 8, f"{i}. {title}", ln=True)
+            pdf.cell(0, 8, pdf.sanitize(f"{i}. {title}"), ln=True)
 
             # Severity badge
             pdf.severity_badge(severity, x=15, y=y_before)
@@ -302,7 +317,7 @@ class PdfGenerator:
             # Description
             pdf.set_font("Helvetica", "", 10)
             pdf.set_text_color(40, 40, 40)
-            pdf.multi_cell(0, 5, description)
+            pdf.multi_cell(0, 5, pdf.sanitize(description))
             pdf.ln(2)
 
             # Recommendation
@@ -311,7 +326,7 @@ class PdfGenerator:
             pdf.cell(0, 6, "Recommendation:", ln=True)
             pdf.set_font("Helvetica", "", 9)
             pdf.set_text_color(30, 30, 30)
-            pdf.multi_cell(0, 5, recommendation)
+            pdf.multi_cell(0, 5, pdf.sanitize(recommendation))
             pdf.ln(6)
 
             # Separator
@@ -403,7 +418,7 @@ class PdfGenerator:
             os_guess = self.scan_result.get("nmap", {}).get("os_guess")
             if os_guess:
                 pdf.set_font("Helvetica", "", 9)
-                pdf.cell(0, 6, f"OS Guess: {os_guess}", ln=True)
+                pdf.cell(0, 6, pdf.sanitize(f"OS Guess: {os_guess}"), ln=True)
                 pdf.ln(2)
 
             cols = ["PORT", "PROTOCOL", "SERVICE", "VERSION"]
@@ -430,9 +445,9 @@ class PdfGenerator:
             pdf.set_font("Helvetica", "", 9)
             pdf.cell(0, 6, f"Anonymous Login: {'YES' if ftp.get('anonymous_login') else 'NO'}", ln=True)
             if ftp.get("banner"):
-                pdf.cell(0, 6, f"Banner: {ftp['banner'][:100]}", ln=True)
+                pdf.cell(0, 6, pdf.sanitize(f"Banner: {ftp['banner'][:100]}"), ln=True)
             if ftp.get("notes"):
-                pdf.cell(0, 6, f"Notes: {ftp['notes']}", ln=True)
+                pdf.cell(0, 6, pdf.sanitize(f"Notes: {ftp['notes']}"), ln=True)
             pdf.ln(6)
 
         # SSH
@@ -442,9 +457,9 @@ class PdfGenerator:
             pdf.cell(0, 8, "SSH Probe Results", ln=True)
             pdf.set_font("Helvetica", "", 9)
             if ssh.get("version"):
-                pdf.cell(0, 6, f"Version: {ssh['version']}", ln=True)
+                pdf.cell(0, 6, pdf.sanitize(f"Version: {ssh['version']}"), ln=True)
             if ssh.get("known_cves"):
-                pdf.cell(0, 6, f"Known CVEs: {', '.join(ssh['known_cves'])}", ln=True)
+                pdf.cell(0, 6, pdf.sanitize(f"Known CVEs: {', '.join(ssh['known_cves'])}"), ln=True)
             pdf.ln(6)
 
         # MySQL
@@ -455,7 +470,7 @@ class PdfGenerator:
             pdf.set_font("Helvetica", "", 9)
             pdf.cell(0, 6, f"Accessible: {'YES' if mysql.get('accessible') else 'NO'}", ln=True)
             if mysql.get("credentials_found"):
-                pdf.cell(0, 6, f"Credentials Found: {mysql['credentials_found']}", ln=True)
+                pdf.cell(0, 6, pdf.sanitize(f"Credentials Found: {mysql['credentials_found']}"), ln=True)
             pdf.ln(6)
 
         # SMB
@@ -466,9 +481,9 @@ class PdfGenerator:
             pdf.set_font("Helvetica", "", 9)
             pdf.cell(0, 6, f"Null Session: {'YES' if smb.get('null_session') else 'NO'}", ln=True)
             shares_str = ", ".join(s["name"] for s in smb["shares"])
-            pdf.cell(0, 6, f"Shares: {shares_str}", ln=True)
+            pdf.cell(0, 6, pdf.sanitize(f"Shares: {shares_str}"), ln=True)
             if smb.get("users"):
-                pdf.cell(0, 6, f"Users: {', '.join(smb['users'][:10])}", ln=True)
+                pdf.cell(0, 6, pdf.sanitize(f"Users: {', '.join(smb['users'][:10])}"), ln=True)
             pdf.ln(6)
 
         # Scan errors
@@ -478,5 +493,5 @@ class PdfGenerator:
             pdf.cell(0, 8, "Non-Fatal Scan Errors", ln=True)
             pdf.set_font("Helvetica", "", 9)
             for err in errors:
-                pdf.multi_cell(0, 5, f"• {err}")
+                pdf.multi_cell(0, 5, pdf.sanitize(f"* {err}"))
             pdf.ln(4)
