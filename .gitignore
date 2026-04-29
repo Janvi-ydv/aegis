@@ -1,0 +1,13 @@
+.env
+reports/
+/tmp/aegis_*
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+aegis.log
+.mypy_cache/
+dist/
+build/
+*.pyo
