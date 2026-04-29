@@ -6,6 +6,7 @@ Modules must NOT import Rich directly — use functions from this module.
 """
 
 import os
+import sys
 import logging
 from rich.console import Console
 from rich.panel import Panel
@@ -15,9 +16,6 @@ from rich.text import Text
 from rich import box
 
 __version__ = "1.0.0"
-
-import os
-import sys
 
 # On Windows, set UTF-8 mode via environment (doesn't break pytest capturing)
 if sys.platform == "win32":
@@ -61,30 +59,6 @@ def print_banner() -> None:
     +===========================================================+
     """
     console.print(banner, style="bold cyan")
-
-
-# ─────────────────────────────────────────────
-# Scope Authorization Prompt
-# ─────────────────────────────────────────────
-
-
-def scope_prompt(target: str) -> bool:
-    """
-    Display scope authorization prompt and return True if user confirms.
-    Default is NO — user must explicitly type 'y'.
-    """
-    console.print(
-        Panel(
-            f"[bold white]Target:[/bold white] [cyan]{target}[/cyan]\n\n"
-            "[yellow]AEGIS will perform active scanning against this target.\n"
-            "Unauthorized scanning is illegal and unethical.\n\n"
-            "[bold white]Do you have explicit written authorization to scan this target?[/bold white]",
-            title="[bold yellow][ ⚠ AUTHORIZATION CHECK ][/bold yellow]",
-            border_style="yellow",
-        )
-    )
-    answer = console.input("[bold yellow]Confirm [y/N]:[/bold yellow] ").strip().lower()
-    return answer == "y"
 
 
 # ─────────────────────────────────────────────

@@ -1,12 +1,12 @@
 """
-core/validator.py — Target validation and scope authorization for AEGIS
+core/validator.py — Target validation for AEGIS
 """
 
 import ipaddress
 import re
 import logging
 
-from ui.console import console, print_error, scope_prompt as _scope_prompt
+from ui.console import console, print_error
 
 logger = logging.getLogger("aegis")
 
@@ -18,7 +18,7 @@ _PRIVATE_NETWORKS = [
     ipaddress.ip_network("127.0.0.0/8"),
 ]
 
-# Hostname regex (simple, covers most lab hostnames)
+# Hostname regex
 _HOSTNAME_RE = re.compile(
     r"^(?:[a-zA-Z0-9]"
     r"(?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?"
@@ -29,31 +29,31 @@ _HOSTNAME_RE = re.compile(
 
 def validate_target(target: str) -> bool:
     """
-    Returns True if target is a valid IP address or resolvable hostname format.
-    Does NOT perform DNS resolution — just validates the format.
+    Returns True if target is a valid IP address or hostname format.
+    Does NOT perform DNS resolution.
     """
     if not target or not target.strip():
         return False
 
     target = target.strip()
 
-    # If the string looks like an IP (digits and dots only), validate strictly as IP
+    # Strings that look like IPs must be strictly valid
     _IP_LIKE = re.compile(r"^\d[\d.]*$")
     if _IP_LIKE.match(target):
         try:
             ipaddress.ip_address(target)
             return True
         except ValueError:
-            return False  # Looks like an IP but is invalid (e.g. 999.x.x.x or 192.168.1)
+            return False
 
-    # Try exact IP parse first (catches IPv6, etc.)
+    # IPv6 and other strict IP forms
     try:
         ipaddress.ip_address(target)
         return True
     except ValueError:
         pass
 
-    # Try hostname
+    # Hostname
     if _HOSTNAME_RE.match(target):
         return True
 
@@ -69,23 +69,11 @@ def is_private_ip(target: str) -> bool:
         return False
 
 
-def scope_authorization_prompt(target: str) -> bool:
-    """
-    Show scope authorization prompt and return True if user confirms.
-    Always shown — no bypass in normal operation.
-    Default is NO (user must explicitly type 'y').
-    """
-    return _scope_prompt(target)
-
-
 def validate_and_authorize(target: str) -> bool:
     """
-    Full validation + authorization flow.
-
-    Returns True if target is valid AND user authorizes.
-    Prints error messages and returns False on any failure.
+    Validates the target format and returns True if valid.
+    No authorization prompt — scanning starts immediately.
     """
-    # 1. Format validation
     if not validate_target(target):
         print_error(
             f"Invalid target: '{target}' is not a valid IP address or hostname.",
@@ -93,7 +81,6 @@ def validate_and_authorize(target: str) -> bool:
         )
         return False
 
-    # 2. Localhost warning
     if target in ("127.0.0.1", "localhost", "::1"):
         console.print(
             "\n  [bold yellow]⚠[/bold yellow]  "
@@ -101,14 +88,4 @@ def validate_and_authorize(target: str) -> bool:
         )
 
     logger.info(f"Target validated: {target}")
-
-    # 3. Scope authorization prompt
-    authorized = scope_authorization_prompt(target)
-    if not authorized:
-        console.print(
-            "\n  [bold cyan]AEGIS[/bold cyan]  "
-            "[white]Scan aborted. Always obtain explicit written authorization "
-            "before scanning any target.[/white]\n"
-        )
-        logger.info("Scan aborted by user at authorization prompt.")
-    return authorized
+    return True
